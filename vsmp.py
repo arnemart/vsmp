@@ -11,41 +11,48 @@ from waveshare_epd import epd7in5_V2
 
 logging.basicConfig(level=logging.ERROR)
 
-logging.info("Load status JSON")
-with open("status.json") as status_file:
+def get_image(movie, frame):
+  return path.join(dir, "movies", movie, "frame_%d.png" % frame)
+
+def next_movie(movie):
+  movies = listdir(path.join(dir, "movies"))
+  movies.sort()
+  if movie in movies:
+    return movies[(movies.index(movie) + 1) % len(movies)]
+  else:
+    return movies[0]
+
+STATUS_FILE_PATH = path.join(dir, "status.json")
+
+logging.debug("Load status JSON")
+with open(STATUS_FILE_PATH) as status_file:
   status = json.load(status_file)
 
-prev_frame = path.join(dir, "movies", status["movie"], "frame_%d.png" % (status["frame"]))
+prev_frame = get_image(status["movie"], status["frame"])
 
 status["frame"] += 1
 
-logging.debug("Current movie is %s, next frame is %d" % (status["movie"], status["frame"]))
-
-next_frame = path.join(dir, "movies", status["movie"], "frame_%d.png" % (status["frame"]))
+logging.info("Current movie is %s, next frame is %d" % (status["movie"], status["frame"]))
+next_frame = get_image(status["movie"], status["frame"])
 
 if not path.exists(next_frame):
-  logging.debug("Image file for next frame does not exists, go to next movie")
-  movies = listdir("movies")
-  movies.sort()
-  if status["movie"] in movies:
-    status["movie"] = movies[(movies.index(status["movie"]) + 1) % len(movies)]
-  else:
-    status["movie"] = movies[0]
-  logging.debug("Next movie is %s" % (status["movie"]))
+  logging.info("Image file for next frame does not exists, go to next movie")
+  status["movie"] = next_movie(status["movie"])
+  logging.info("Next movie is %s" % status["movie"])
   status["frame"] = 1
-  next_frame = path.join(dir, "movies", status["movie"], "frame_1.png")
+  next_frame = get_image(status["movie"], 1)
 
-logging.info("Save new status JSON")
-with open("status.json", "w") as status_file:
+logging.debug("Save new status JSON")
+with open(STATUS_FILE_PATH, "w") as status_file:
   json.dump(status, status_file)
 
 try:
   prev_img = Image.open(prev_frame)
   img = Image.open(next_frame)
   if list(prev_img.getdata()) == list(img.getdata()):
-    logging.info("Frames are identical, do nothing")
+    logging.debug("Frames are identical, do nothing")
   else:
-    logging.info("Display next frame")
+    logging.debug("Display next frame")
     epd = epd7in5_V2.EPD()
     epd.init()
     epd.display(epd.getbuffer(img))
