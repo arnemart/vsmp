@@ -5,11 +5,25 @@ import json
 import logging
 from PIL import Image
 from os import listdir, path
+import argparse
 dir = path.dirname(path.realpath(__file__))
 sys.path.append(path.join(dir, 'lib'))
 from waveshare_epd import epd7in5_V2
 
-logging.basicConfig(level=logging.ERROR)
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--force", action="store_true", help="Refresh even if frames are identical")
+parser.add_argument("-c", "--clear", action="store_true", help="Clear display")
+parser.add_argument("-d", "--debug", action="store_true", help="Debug logging")
+args = parser.parse_args()
+
+logging.basicConfig(level=logging.DEBUG if args.debug else logging.ERROR)
+
+if args.clear:
+  epd = epd7in5_V2.EPD()
+  epd.init()
+  epd.Clear()
+  epd.sleep()
+  sys.exit()
 
 def get_image(movie, frame):
   return path.join(dir, "movies", movie, "frame_%d.png" % frame)
@@ -49,14 +63,14 @@ with open(STATUS_FILE_PATH, "w") as status_file:
 try:
   prev_img = Image.open(prev_frame)
   img = Image.open(next_frame)
-  if list(prev_img.getdata()) == list(img.getdata()):
-    logging.debug("Frames are identical, do nothing")
-  else:
+  if args.force or list(prev_img.getdata()) != list(img.getdata()):
     logging.debug("Display next frame")
     epd = epd7in5_V2.EPD()
     epd.init()
     epd.display(epd.getbuffer(img))
     epd.sleep()
+  else:
+    logging.debug("Frames are identical, do nothing")
 
 except IOError as e:
   logging.error(e)
