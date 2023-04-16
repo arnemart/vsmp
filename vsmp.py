@@ -19,6 +19,7 @@ args = parser.parse_args()
 logging.basicConfig(level=logging.DEBUG if args.debug else logging.ERROR)
 
 if args.clear:
+  logging.info("Clearing screen")
   epd = epd7in5_V2.EPD()
   epd.init()
   epd.Clear()
@@ -61,9 +62,14 @@ with open(STATUS_FILE_PATH, "w") as status_file:
   json.dump(status, status_file)
 
 try:
-  prev_img = Image.open(prev_frame)
   img = Image.open(next_frame)
-  if args.force or list(prev_img.getdata()) != list(img.getdata()):
+  proceed = True
+
+  if path.exists(prev_frame):
+    prev_img = Image.open(prev_frame)
+    proceed = args.force or list(prev_img.getdata()) != list(img.getdata())
+
+  if proceed:
     logging.debug("Display next frame")
     epd = epd7in5_V2.EPD()
     epd.init()

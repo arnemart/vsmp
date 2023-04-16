@@ -10,7 +10,7 @@ Put frames as 1-bit 800x480 png-files inside each movie folder, named `frame_1.p
 ffmpeg -i input.file -vf "scale=(iw*sar)*max(800/(iw*sar)\,480/ih):ih*max(800/(iw*sar)\,480/ih), crop=800:480" "frame_%d.png"
 ```
 
-## Converting all frames to 1-bit with Floyd-Steinberg dithering:
+## Converting all frames to 1-bit with Floyd-Steinberg dithering using imagemagick:
 
 ```
 find . -name "*.png" -exec convert {} -dither FloydSteinberg -remap pattern:gray50 {} \;
