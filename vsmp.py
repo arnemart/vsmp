@@ -65,7 +65,7 @@ try:
   img = Image.open(next_frame)
   proceed = True
 
-  if path.exists(prev_frame):
+  if status["frame"] > 1 and path.exists(prev_frame):
     prev_img = Image.open(prev_frame)
     proceed = args.force or list(prev_img.getdata()) != list(img.getdata())
 
