@@ -18,14 +18,6 @@ args = parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG if args.debug else logging.ERROR)
 
-if args.clear:
-  logging.info("Clearing screen")
-  epd = epd7in5_V2.EPD()
-  epd.init()
-  epd.Clear()
-  epd.sleep()
-  sys.exit()
-
 def get_image(movie, frame):
   return path.join(dir, "movies", movie, "frame_%d.png" % frame)
 
@@ -39,11 +31,33 @@ def next_movie(movie):
 
 STATUS_FILE_PATH = path.join(dir, "status.json")
 
-logging.debug("Load status JSON")
-with open(STATUS_FILE_PATH) as status_file:
-  status = json.load(status_file)
+def read_status():
+  logging.debug("Load status JSON")
+  with open(STATUS_FILE_PATH) as status_file:
+    try:
+      return json.load(status_file)
+    except IOError as e:
+      logging.error(e)
 
-prev_frame = get_image(status["movie"], status["frame"])
+def save_status(s):
+  logging.debug("Save new status JSON")
+  with open(STATUS_FILE_PATH, "w") as status_file:
+    try:
+      json.dump(s, status_file)
+    except IOError:
+      logging.error(e)
+
+status = read_status()
+
+if args.clear:
+  logging.info("Clearing screen")
+  epd = epd7in5_V2.EPD()
+  epd.init()
+  epd.Clear()
+  epd.sleep()
+  status["prev"] = "clear"
+  save_status(status)
+  sys.exit()
 
 status["frame"] += 1
 
@@ -57,16 +71,12 @@ if not path.exists(next_frame):
   status["frame"] = 1
   next_frame = get_image(status["movie"], 1)
 
-logging.debug("Save new status JSON")
-with open(STATUS_FILE_PATH, "w") as status_file:
-  json.dump(status, status_file)
-
 try:
   img = Image.open(next_frame)
   proceed = True
 
-  if status["frame"] > 1 and path.exists(prev_frame):
-    prev_img = Image.open(prev_frame)
+  if status["prev"] != "clear" and path.exists(status["prev"]):
+    prev_img = Image.open(status["prev"])
     proceed = args.force or list(prev_img.getdata()) != list(img.getdata())
 
   if proceed:
@@ -80,3 +90,6 @@ try:
 
 except IOError as e:
   logging.error(e)
+
+status["prev"] = next_frame
+save_status(status)
