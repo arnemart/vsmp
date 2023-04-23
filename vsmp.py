@@ -25,8 +25,8 @@ if not args.dry:
   sys.path.append(path.join(dir, 'lib'))
   from waveshare_epd import epd7in5_V2
 
-def get_image(movie, frame):
-  return path.join(dir, "movies", movie, "frame_%d.png" % frame)
+def get_image(status):
+  return path.join(dir, "movies", status["movie"], "frame_%d.png" % status["frame"])
 
 def next_movie(movie):
   movies = listdir(path.join(dir, "movies"))
@@ -70,14 +70,14 @@ if args.clear:
 status["frame"] += 1
 
 logging.info("Current movie is %s, next frame is %d" % (status["movie"], status["frame"]))
-next_frame = get_image(status["movie"], status["frame"])
+next_frame = get_image(status)
 
 if not path.exists(next_frame):
   logging.info("Image file for next frame does not exists, go to next movie")
   status["movie"] = next_movie(status["movie"])
-  logging.info("Next movie is %s" % status["movie"])
   status["frame"] = 1
-  next_frame = get_image(status["movie"], 1)
+  logging.info("Next movie is %s" % status["movie"])
+  next_frame = get_image(status)
 
 try:
   proceed = True
