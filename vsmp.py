@@ -84,7 +84,7 @@ try:
   
   if not args.dry:
     img = Image.open(next_frame)
-    if status["prev"] != "clear" and path.exists(status["prev"]):
+    if "prev" in status and status["prev"] != "clear" and path.exists(status["prev"]):
       prev_img = Image.open(status["prev"])
       proceed = args.force or list(prev_img.getdata()) != list(img.getdata())
 
