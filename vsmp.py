@@ -10,6 +10,7 @@ parser.add_argument("-f", "--force", action="store_true", help="Refresh even if 
 parser.add_argument("-c", "--clear", action="store_true", help="Clear display")
 parser.add_argument("-d", "--debug", action="store_true", help="Debug logging")
 parser.add_argument("-s", "--dry", action="store_true", help="Dry run")
+parser.add_argument("-i", "--img", help="Display a single image")
 args = parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG if args.debug or args.dry else logging.ERROR)
@@ -56,13 +57,25 @@ def save_status(s):
 
 status = read_status()
 
+def with_epd(fn):
+  epd = epd7in5_V2.EPD()
+  epd.init()
+  fn(epd)
+  epd.sleep()
+
+if args.img:
+  logging.info("Show image: %s" % args.img)
+  if not args.dry:
+    img = Image.open(args.img)
+    with_epd(lambda epd: epd.display(epd.getbuffer(img)))
+  status["prev"] = args.img
+  save_status(status)
+  sys.exit()
+
 if args.clear:
   logging.info("Clearing screen")
   if not args.dry:
-    epd = epd7in5_V2.EPD()
-    epd.init()
-    epd.Clear()
-    epd.sleep()
+    with_epd(lambda epd: epd.Clear())
   status["prev"] = "clear"
   save_status(status)
   sys.exit()
@@ -84,17 +97,14 @@ try:
   
   if not args.dry:
     img = Image.open(next_frame)
-    if "prev" in status and status["prev"] != "clear" and path.exists(status["prev"]):
+    if not args.force and "prev" in status and status["prev"] != "clear" and path.exists(status["prev"]):
       prev_img = Image.open(status["prev"])
-      proceed = args.force or list(prev_img.getdata()) != list(img.getdata())
+      proceed = list(prev_img.getdata()) != list(img.getdata())
 
   if proceed:
     logging.debug("Display next frame")
     if not args.dry:
-      epd = epd7in5_V2.EPD()
-      epd.init()
-      epd.display(epd.getbuffer(img))
-      epd.sleep()
+      with_epd(lambda epd: epd.display(epd.getbuffer(img)))
   else:
     logging.debug("Frames are identical, do nothing")
 
